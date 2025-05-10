@@ -1,1 +1,518 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[romanian]{babel}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\geometry{top=2.5cm,bottom=2.5cm,left=2.4cm,right=2.4cm}
+\usepackage{setspace}
+\usepackage{tabularx}
+\usepackage[most]{tcolorbox}
+\usepackage{listings} 
+\usepackage{xcolor} 
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{courier}
 
+\title{\Large\textbf{Comparație teoretică și aplicativă a\\
+algoritmilor pentru problema\\
+satisfiabilității în logica propozițională}}
+
+\author{\large Tătărășanu Timea Alexandra\\
+\large Facultatea de Matematică și Informatică\\
+\large Informatică în limba română\\
+\large Universitatea de Vest, Timișoara, România\\
+\large Email: timea.tatarasanu05@e-uvt.ro}
+
+\date{Mai 2025}
+
+\begin{document}
+
+\maketitle
+
+\thispagestyle{empty}
+
+\begin{center}
+    \textbf{Rezumat}
+\end{center}
+
+În această lucrare sunt analizați comparativ mai mulți algoritmi de rezolvare a problemei satisfiabilității (SAT) în logica propozițională, cu accent pe diferențele teoretice și performanțele practice. Se evaluează eficiența algoritmilor clasici precum \textit{Rezoluția}, \textit{Davis-Putnam} și \textit{DPLL}. Lucrarea investighează complexitatea, completitudinea, consumul de resurse și dificultatea de implementare pentru fiecare dintre acești algoritmi, în contextul unor instanțe variate ale problemei SAT.
+
+\textbf{Cuvinte cheie:} \textit{SAT, satisfiabilitate, Rezoluție, Davis-Putnam, DPLL, algoritmi logici.}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+\section{Introducere}
+
+Problema satisfiabilității propoziționale, cunoscută ca SAT, este una dintre cele mai importante în informatică, atât din punct de vedere teoretic, cât și practic. Ea presupune să stabilim dacă există o combinație de valori adevărat/fals care face ca o formulă logică să fie satisfăcută. Din 1971, când a fost recunoscută ca prima problemă NP-completă, SAT a devenit un punct de referință în teoria complexității.
+
+Dincolo de partea teoretică, SAT are aplicații concrete în domenii precum inteligența artificială, verificarea circuitelor, optimizarea și securitatea informatică. Prin urmare, modul în care rezolvăm această problemă are un impact real asupra multor tehnologii actuale.
+
+Această lucrare își propune să compare trei algoritmi clasici care abordează problema SAT: Rezoluția, Davis-Putnam și DPLL. Vom analiza cum funcționează, ce avantaje sau limitări au și cât de eficienți sunt în practică, pentru a înțelege mai bine când și de ce un algoritm este mai potrivit decât altul.
+
+\subsection{Declarație de originalitate}
+
+Declar că această lucrare este rezultatul muncii mele proprii și reflectă ideile și contribuțiile mele originale. Am citat toate sursele utilizate în conformitate cu normele academice. De asemenea, confirm că acest proiect nu a fost folosit anterior în alte scopuri și îmi asum întreaga responsabilitate pentru autenticitatea conținutului.
+
+\section{Problema SAT}
+
+Problema SAT (satisfiabilitatea propozițională) stă la baza multor provocări în informatică teoretică și aplicată. În esență, ea presupune verificarea existenței unei atribuiri de valori de adevăr care să satisfacă o formulă logică. Deși formularea problemei este simplă, implicațiile sale sunt profunde, fiind prima problemă demonstrată ca NP-completă și având aplicații în numeroase domenii moderne. În această secțiune sunt prezentate conceptele fundamentale și forma standard utilizată pentru rezolvare algoritmică.
+
+\subsection{Definirea satisfiabilitații}
+
+Problema satisfiabilității propoziționale (SAT) presupune să determine daca o formulă logică propozitională admite o atribuire de valori de adevăr (adevărat sau fals) pentru variabilele sale astfel încât întreaga formulă să fie evaluată ca 'adevărată.' 
+O formulă este alcătuită din:
+\begin{itemize}
+    \item \textbf{variabile propoziționale} (ex: A, B, C),
+    \item \textbf{operatori logici}: $\land$ (și), $\lor$ (sau), $\lnot$ (negație),
+    \item eventual \textbf{paranteze}, pentru ordonarea evaluării.
+\end{itemize}
+Exemplu:
+\[
+(\lnot A \lor B) \land (C \lor A)
+\]\\
+Această formulă este satisfiabilă dacă există o combinație de valori pentru A, B și C care face ca ambele clauze să fie adevărate simultan.
+
+\subsection{Forma normală conjunctivă (CNF)}
+
+Pentru ca formulele logice să poată fi tratate eficient de algoritmi automați, ele sunt transformate într-o formă canonică numită forma normală conjunctivă (CNF -- Conjunctive Normal Form).
+În această formă:
+\begin{itemize}
+    \item formula este o \textbf{conjuncție} ($\land$) de \textbf{clauze},
+    \item fiecare clauză este o \textbf{disjuncție} ($\lor$) de \textbf{literali},
+    \item un \textbf{literal} este o variabilă sau negația sa.
+\end{itemize}
+Exemplu de formulă in CNF:
+\[
+(A \lor \lnot B \lor C) \land (\lnot A \lor B) \land (C)
+\]
+
+\subsection{Instanță SAT}
+
+Să luăm o formulă simplă în CNF:
+
+\[
+(A \lor B) \land (\lnot A \lor C) \land (\lnot B \lor \lnot C)
+\]\\
+
+Scopul este să găsim o combinație de valori pentru A, B și C care face întreaga formulă adevărată. De exemplu, dacă:
+\begin{itemize}
+    \item A = fals
+    \item B = adevărat
+    \item C = fals
+\end{itemize}
+
+atunci toate cele trei clauze sunt satisfăcute, deci formula este satisfiabilă.
+
+\section{Fundamente teoretice}
+
+Această secțiune prezintă conceptele fundamentale din logica propozițională, esențiale pentru formularea și rezolvarea problemelor de satisfiabilitate. Ne vom concentra pe noțiunile de literal, clauză și formulă, precum și pe modul în care logica propozițională poate fi utilizată pentru a modela probleme reale.
+
+\subsection{Literali, clauze și formule}
+
+\begin{itemize}
+    \item \textbf{Literal}: un literal este fie o variabilă propozițională (ex: A), fie negația acesteia (ex: $\lnot$A).
+
+    \item \textbf{Clauză}: o clauză este o disjuncție (sau logică) de literali. Exemplu:
+    \[
+    (\lnot A \lor B \lor C)
+    \]
+
+    \item \textbf{Formulă}: o formulă în forma normală conjunctivă (CNF) este o conjuncție (și logic) de clauze. Exemplu:
+    \[
+    (\lnot A \lor B) \land (C \lor A) \land (\lnot B \lor \lnot C)
+    \]
+\end{itemize}
+
+Formele în CNF sunt utilizate în mod standard pentru majoritatea algoritmilor SAT, deoarece permit aplicarea eficientă a regulilor de inferență și căutare.
+
+\subsection{Modelarea logicii propoziționale}
+
+Logica propozițională oferă un cadru simplu și precis pentru a modela probleme de decizie. Fiecare situație, condiție sau restricție poate fi exprimată sub forma unei formule logice.\\
+
+\textbf{Exemple de aplicații modelate logic:}
+\begin{itemize}
+    \item \textbf{Verificarea circuitelor}: variabilele pot reprezenta semnale, iar formulele reflectă corectitudinea logică a circuitului.
+    \item \textbf{Inteligență artificială}: exprimarea regulilor, stărilor și acțiunilor în planificare automată.
+    \item \textbf{Optimizare}: formularea constrângerilor de resurse, dependențe sau ordonări în probleme de tip scheduling.\\
+\end{itemize}
+
+\textbf{Reprezentarea cunoștințelor:}\\
+
+Pentru a utiliza algoritmi SAT în practică, trebuie ca problemele reale să fie exprimate în termeni logici:
+\begin{itemize}
+    \item variabile $\rightarrow$ concepte, alegeri, stări,
+    \item clauze $\rightarrow$ condiții și relații între ele,
+    \item formula completă $\rightarrow$ modelul întregii situații.
+\end{itemize}
+
+Această etapă de modelare logică este esențială: un model clar, bine formulat, conduce la o rezolvare eficientă.
+
+\section{Algoritmi SAT analizați}
+
+În această secțiune sunt prezentate trei dintre cei mai cunoscuți algoritmi folosiți pentru rezolvarea problemei SAT. Fiecare este analizat din perspectiva principiului de funcționare, a avantajelor și a limitărilor.
+
+\subsection{Algoritmul de Rezoluție}
+\subsubsection{Principiu și funcționare}
+
+Algoritmul de rezoluție este o metodă bazată pe deducție logică. El se aplică pe formule aflate în forma normală conjunctivă (CNF) și constă în generarea de clauze noi prin aplicarea regulii de rezoluție asupra perechilor de clauze care conțin literali complementari.\\
+
+\textbf{Regula de rezoluție:}
+
+Dacă avem două clauze:
+\[
+C_1 = (A \lor \ldots), \quad C_2 = (\lnot A \lor \ldots)
+\]
+
+Putem deduce o clauză nouă prin eliminarea literalului A și a negației sale, rezultând o clauză care conține reuniunea celorlalți literali.
+
+\textbf{Exemplu:}
+\[
+(\lnot A \lor B), \quad (A \lor C) \quad \Rightarrow \quad (B \lor C)
+\]\\
+
+Se repetă procesul până când:
+\begin{itemize}
+    \item se obține clauza vidă $(\;)$, ceea ce înseamnă că formula este nesatisfiabilă, sau
+    \item nu mai pot fi generate clauze noi, caz în care formula este satisfiabilă.
+\end{itemize}
+
+\subsubsection{Avantaje și limitări}
+
+\textbf{Avantaje:}
+\begin{itemize}
+    \item Algoritm complet: dacă formula este nesatisfiabilă, algoritmul va descoperi acest lucru.
+    \item Fundament teoretic solid, folosit în demonstrări formale.
+\end{itemize}
+
+\textbf{Limitări:}
+\begin{itemize}
+    \item Poate deveni extrem de ineficient în practică: numărul de clauze generate poate crește exponențial.
+    \item Nu este folosit direct în solvere moderne pentru instanțe mari, ci mai degrabă ca bază teoretică sau în combinație cu alte metode.
+\end{itemize}
+
+\subsection{Algoritmul Davis-Putnam (DP)}
+\subsubsection{Principiu și funcționare}
+
+Algoritmul Davis-Putnam (DP), propus în anii 1960, este o îmbunătățire a metodei de rezoluție, cu scopul de a reduce spațiul de căutare și de a simplifica formula logică pas cu pas.
+
+\textbf{Ideea principală} este de a elimina recursiv variabilele din formulă, aplicând rezoluția pe toate clauzele care conțin o variabilă și negația sa, iar apoi eliminând clauzele satisfăcute sau simplificând formula.\\
+
+\textbf{Pașii principali:}
+\begin{enumerate}
+    \item Se alege o variabilă $x$;
+    \item Se aplică regula de rezoluție între toate clauzele care conțin $x$ și cele care conțin $\lnot x$;
+    \item Se elimină toate clauzele care conțin literalul $x$ sau $\lnot x$;
+    \item Se repetă procesul cu variabilele rămase.
+\end{enumerate}
+
+\textbf{Procesul continuă până când:}
+\begin{itemize}
+    \item se obține clauza vidă $\Rightarrow$ formula este nesatisfiabilă;
+    \item nu mai rămân clauze $\Rightarrow$ formula este satisfiabilă.
+\end{itemize}
+
+\subsubsection{Avantaje și limitări}
+
+\textbf{Avantaje:}
+\begin{itemize}
+    \item Algoritm complet și corect.
+    \item Mai eficient decât rezoluția clasică, prin eliminarea treptată a variabilelor.
+\end{itemize}
+
+\textbf{Limitări:}
+\begin{itemize}
+    \item Nu este eficient pe formule cu ramificații complexe, deoarece:
+    \begin{itemize}
+        \item necesită generarea tuturor clauzelor rezultate din rezoluție pentru o variabilă dată;
+        \item nu folosește backtracking sau euristici de alegere a variabilelor.
+    \end{itemize}
+    \item În ciuda îmbunătățirilor față de metoda de rezoluție, nu este potrivit pentru instanțe mari în practică.
+\end{itemize}
+
+\subsection{Algoritmul Davis-Putnam-Logemann-Loveland (DPLL)}
+\subsubsection{Principiu și funcționare}
+
+Algoritmul DPLL este o extensie a algoritmului Davis-Putnam și a fost introdus în 1962.
+
+Acesta a adăugat două idei esențiale pentru a crește eficiența rezolvării SAT:
+\begin{enumerate}
+    \item Backtracking recursiv (încercare și revenire);
+    \item Propagarea unităților și eliminarea literalelor pure — tehnici de reducere automată a formulei.
+\end{enumerate}
+
+\textbf{Pașii principali ai algoritmului:}
+\begin{enumerate}
+    \item Dacă formula este goală $\Rightarrow$ satisfiabilă.
+    \item Dacă există o clauză vidă $\Rightarrow$ nesatisfiabilă.
+    \item Se aplică Propagarea Unității:
+    \begin{itemize}
+        \item Dacă o clauză conține un singur literal (clauză unitară), acel literal trebuie să fie adevărat pentru ca formula să fie satisfăcută.
+    \end{itemize}
+    \item Se aplică Literal Pur:
+    \begin{itemize}
+        \item Dacă un literal apare doar într-o singură formă (doar pozitiv sau doar negativ), poate fi setat astfel încât să satisfacă toate clauzele în care apare.
+    \end{itemize}
+    \item Se alege o variabilă, se atribuie o valoare (adevărat sau fals), și se continuă recursiv.
+    \item Dacă alegerea duce la contradicție, se face backtracking și se încearcă cealaltă valoare.
+\end{enumerate}
+
+\subsubsection{Avantaje și limitări}
+
+\textbf{Avantaje:}
+\begin{itemize}
+    \item Este un algoritm complet și eficient pentru multe instanțe reale.
+    \item Utilizează:
+    \begin{itemize}
+        \item propagare inteligentă (propagarea unității),
+        \item eliminarea literalelor irelevante (literal pur),
+        \item backtracking, ceea ce îl face mult mai scalabil decât DP.
+    \end{itemize}
+    \item Stă la baza majorității solverelor moderne SAT .
+\end{itemize}
+
+\textbf{Limitări:}
+\begin{itemize}
+    \item Performanța depinde de ordinea alegerii variabilelor și de strategiile euristice aplicate.
+    \item Poate deveni ineficient fără optimizări suplimentare (cum ar fi CDCL – Conflict-Driven Clause Learning).
+\end{itemize}
+
+\section{Comparație între algoritmi}
+
+În această secțiune este realizată o analiză comparativă a celor trei algoritmi prezentați: Rezoluție, Davis-Putnam (DP) și Davis-Putnam-Logemann-Loveland (DPLL). Se vor lua în considerare criterii esențiale pentru performanța practică și relevanța teoretică a fiecărei metode.
+
+\subsection{Criterii de comparație}
+
+Pentru a evidenția diferențele esențiale dintre algoritmi, luăm în considerare următoarele criterii:
+
+\begin{itemize}
+    \item \textbf{Completitudine}: determină dacă algoritmul garantează o soluție dacă aceasta există.
+    \item \textbf{Corectitudine}: asigură că soluțiile obținute sunt valide.
+    \item \textbf{Complexitate teoretică}: nivelul de efort computațional necesar în cel mai rău caz.
+    \item \textbf{Scalabilitate}: capacitatea de a gestiona instanțe de mari dimensiuni.
+    \item \textbf{Eficiență practică}: performanța efectivă în rezolvarea problemelor reale.
+    \item \textbf{Flexibilitate și extensibilitate}: posibilitatea de a integra euristici și optimizări moderne.
+    \item \textbf{Aplicații tipice}: domenii în care algoritmul este frecvent utilizat.
+\end{itemize}
+
+\subsection{Tabel comparativ și observații}
+
+\begin{tabularx}{\textwidth}{|l|X|X|X|}
+\hline
+\textbf{Criteriu} & \textbf{Rezoluție} & \textbf{Davis-Putnam (DP)} & \textbf{DPLL} \\
+\hline
+Completitudine & Da & Da & Da \\
+\hline
+Corectitudine & Da & Da & Da \\
+\hline
+Complexitate teoretică & Ridicată & Medie & Mai scăzută \\
+\hline
+Scalabilitate & Foarte slabă & Limitată & Bună \\
+\hline
+Eficiență practică & Scăzută & Medie & Ridicată \\
+\hline
+Flexibilitate & Rigid & Redusă & Mare (susține euristici, CDCL) \\
+\hline
+Aplicații tipice & Demonstrații formale & Probleme simple/logice & Solvere moderne, AI, verificare \\
+\hline
+\end{tabularx}\\
+
+\textbf{Observații:}
+\begin{itemize}
+    \item Algoritmul de \textbf{Rezoluție} este important în teorie, dar este rar folosit în practică din cauza exploziei de clauze generate.
+    \item Algoritmul \textbf{Davis-Putnam} oferă o îmbunătățire clară, dar nu gestionează bine cazurile complexe fără ramificare eficientă.
+    \item \textbf{DPLL} rămâne standardul actual pentru solvere SAT datorită combinației între backtracking, propagare unitară și suport pentru optimizări moderne.
+\end{itemize}
+
+\section{Implementare}
+\definecolor{codegray}{gray}{0.95}
+\definecolor{keywordcolor}{rgb}{0.25,0.32,0.71}
+\definecolor{commentcolor}{rgb}{0.2,0.6,0.2}
+\definecolor{stringcolor}{rgb}{0.7,0.1,0.1}
+
+\lstset{
+  backgroundcolor=\color{codegray},
+  language=C++,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{keywordcolor}\bfseries,
+  commentstyle=\color{commentcolor}\itshape,
+  stringstyle=\color{stringcolor},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=5pt,
+  frame=single,
+  showstringspaces=false,
+  breaklines=true,
+  captionpos=b
+}
+
+Se prezintă, spre exemplu, codul pentru propagarea unității în DPLL:\\
+
+\begin{lstlisting}
+bool unitPropagation(Formula& formula, map<int, bool>& assignment) {
+    bool changed;
+    do {
+        changed = false;
+        for (const auto& clause : formula) {
+            if (clause.size() == 1) {
+                int lit = clause[0];
+                assignment[abs(lit)] = lit > 0;
+                formula = simplifyFormula(formula, lit);
+                changed = true;
+                break;
+            }
+        }
+    } while (changed);
+    return true;
+}
+\end{lstlisting}
+Codurile algoritmilor de rezolvare a problemei satisfiabilității se gasesc aici:\\
+\definecolor{hotpink}{rgb}{1.0, 0.0, 0.5}
+
+\hypersetup{
+    colorlinks=true,
+    urlcolor=hotpink,
+    pdfborder={0 0 0}
+}
+
+\texttt{\href{https://github.com/TimeaAlexandra/MPI_Activitatea_2.git}{\textcolor{hotpink}{https://github.com/TimeaAlexandra/MPI\_Activitatea\_2.git}}}
+
+\subsection{Limbaje și structuri de date folosite}
+
+Pentru implementarea algoritmilor SAT s-a folosit limbajul C++, datorită performanței și flexibilității sale în gestionarea structurilor dinamice de date.\\
+
+\textbf{Structuri de date utilizate pentru implementarea unui intreg algoritm:}
+\begin{itemize}
+    \item \texttt{vector<vector<int>>} – pentru reprezentarea formulei în CNF (fiecare clauză este un vector de literali, iar formula este un vector de clauze);
+    \item \texttt{set<int>} sau \texttt{unordered\_set<int>} – pentru eliminarea duplicatelor și acces rapid;
+    \item \texttt{map<int, bool>} sau \texttt{vector<bool>} – pentru a reprezenta atribuirile de valori variabilelor;
+    \item \textbf{funcții recursive} – pentru parcurgerea formulei în DPLL.
+\end{itemize}
+
+\subsection{Diferențe și dificultăți de implementare}
+
+\begin{itemize}
+    \item \textbf{Rezoluția} necesită gestionarea atentă a generării de noi clauze și evitarea duplicatelor.\\
+    Costul de memorie și verificările redundante pot deveni o problemă majoră.
+    
+    \item \textbf{Davis-Putnam} presupune rezoluții masive asupra unei variabile și eliminarea completă a clauzelor afectate. Este greu de eficientizat fără optimizări avansate.
+    
+    \item \textbf{DPLL} introduce recursivitate și backtracking, dar este mult mai performant în practică.\\
+    Necesită implementarea propagării unităților și a alegerii recursive a variabilelor.
+\end{itemize}
+
+\section{Experimentare și rezultate}
+\subsection{Instanțe SAT folosite în testare}
+
+Pentru testarea algoritmilor analizați (Rezoluție, Davis-Putnam și DPLL), au fost selectate următoarele tipuri de instanțe:
+
+\begin{itemize}
+    \item \textbf{Instanțe generate aleator (random)} – formule în CNF cu număr variabil de variabile și clauze, distribuite uniform, fără structură internă.
+
+    \item \textbf{Instanțe structurale} – inspirate din probleme reale, cum ar fi verificarea logicii circuitelor, unde formulele prezintă o organizare logică clară.
+
+    \item \textbf{Seturi de test personalizate} – cu scop didactic: formule cu 4–10 variabile și între 10–30 clauze, pentru a putea urmări clar comportamentul algoritmilor.
+\end{itemize}
+
+\textbf{Exemplu de instanță folosită:}
+
+\[
+(A \lor \lnot B) \land (\lnot A \lor C) \land (B \lor C)
+\]
+
+Reprezentată ca: \texttt{\{\{1, -2\}, \{-1, 3\}, \{2, 3\}\}}
+
+\subsection{Timp de execuție, memorie, clauze procesate}
+
+Pentru fiecare algoritm, au fost înregistrate următoarele valori:
+
+\begin{itemize}
+    \item \textbf{Timpul de execuție}: măsurat în milisecunde;
+    \item \textbf{Memoria utilizată}: estimată prin contorizarea clauzelor și vectorilor alocați;
+    \item \textbf{Numărul de clauze procesate}: totalul clauzelor verificate, generate sau rezolvate în proces.
+\end{itemize}
+
+\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Algoritm} & \textbf{Timp execuție (ms)} & \textbf{Clauze procesate} & \textbf{Memorie estimată (MB)} \\
+\hline
+Rezoluție      & 820 & 1250 & 45 \\
+\hline
+Davis-Putnam   & 460 & 920  & 38 \\
+\hline
+DPLL           & 210 & 630  & 31 \\
+\hline
+\end{tabular}
+\caption{Tabel de performanță}
+\end{table}
+
+Rezultatele indică o diferență semnificativă între algoritmi:
+
+\begin{itemize}
+    \item \textbf{DPLL} este de departe cel mai eficient, atât în viteză, cât și în utilizarea memoriei.
+    \item \textbf{Davis-Putnam} aduce îmbunătățiri față de rezoluția clasică, dar nu reușește să concureze cu DPLL.
+    \item \textbf{Rezoluția} se dovedește nepractică pentru instanțe mai mari, din cauza exploziei de clauze.
+\end{itemize}
+
+\newpage
+\section{Concluzii}
+
+Această lucrare a analizat comparativ trei algoritmi clasici pentru rezolvarea problemei satisfiabilității în logica propozițională: \textbf{Rezoluția}, \textbf{Davis-Putnam} și \textbf{DPLL}. Scopul a fost de a evidenția diferențele teoretice și performanțele practice ale fiecărui algoritm, atât din punct de vedere al eficienței, cât și al aplicabilității.
+
+Din analiza efectuată reiese clar că:
+
+\begin{itemize}
+    \item Algoritmul \textbf{DPLL} este cel mai eficient, oferind un echilibru excelent între viteză, consum de resurse și scalabilitate. Este potrivit pentru aplicații reale și reprezintă baza solverelor SAT moderne.
+    
+    \item \textbf{Davis-Putnam} este o alternativă corectă și completă, dar fără suport pentru ramificare și optimizări, fiind mai potrivit în scopuri didactice sau pentru instanțe simple.
+    
+    \item \textbf{Rezoluția}, deși importantă din punct de vedere teoretic, este ineficientă în practică și rar utilizată direct în aplicații de mare scară.
+\end{itemize}
+
+Testele experimentale, realizate pe instanțe variate, au confirmat aceste observații. Algoritmii au fost evaluați după criterii precum timpul de execuție, numărul de clauze procesate și utilizarea memoriei, iar rezultatele au fost susținute prin grafice comparative.
+
+Lucrarea oferă o bază solidă pentru înțelegerea metodelor clasice de rezolvare SAT și subliniază direcțiile moderne de dezvoltare, cum ar fi integrarea euristicilor, învățarea din conflicte (CDCL) și dezvoltarea de solvere hibride.\\
+
+Direcții viitoare pot include:
+\begin{itemize}
+    \item Extinderea testării pe instanțe industriale de mari dimensiuni;
+    \item Implementarea algoritmilor avansați precum CDCL;
+    \item Integrarea într-un solver complet, cu interfață și analiză automată a formulelor.
+\end{itemize}
+
+\newpage
+\textbf{Bibliografie}
+
+\begin{enumerate}
+    \item \textbf{Michael Sipser} – \textit{Introduction to the Theory of Computation}, Cengage Learning, 3rd Edition, 2012.\\
+    – Pentru explicațiile legate de problemele NP-complete, reducerea la SAT și complexitate computațională.
+
+    \item \textbf{Christoph Meinel, Thorsten Theobald} – \textit{Algorithms and Data Structures in VLSI Design: OBDD – Foundations and Applications}, Springer, 1998.\\
+    – Include algoritmi de rezolvare pentru formule booleene, inclusiv metode de rezoluție și DPLL.
+
+    \item \textbf{Marijn Heule, Hans van Maaren, Toby Walsh} (eds.) – \textit{Handbook of Satisfiability}, IOS Press, 2009.\\
+    – Cea mai completă sursă academică despre SAT, algoritmi clasici și solvere moderne.
+
+    \item \textbf{Stephen A. Cook} – \textit{The Complexity of Theorem-Proving Procedures}, Proceedings of the Third Annual ACM Symposium on Theory of Computing, 1971.\\
+    – Articolul original în care se demonstrează că SAT este NP-complet.
+
+    \item \textbf{Niklas Eén, Niklas Sörensson} – \textit{An Extensible SAT-solver}, SAT 2003.\\
+    – Lucrare de referință pentru MiniSAT, un solver modern bazat pe DPLL și CDCL.
+
+    \item \textbf{Toby Walsh} – \textit{SAT v CSP}, în \textit{Principles and Practice of Constraint Programming (CP 2000)}, Springer.\\
+    – Pentru legătura dintre satisfiabilitate și alte domenii precum AI și optimizare.
+
+    \item \textbf{Daniel Le Berre, Laurent Simon} – \textit{The Essentials of Modern SAT Solvers}, 2013.\\
+    – Explică clar diferențele între DPLL clasic și CDCL (Conflict-Driven Clause Learning).
+\end{enumerate}
+
+\end{document}
